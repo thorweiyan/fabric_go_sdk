@@ -1,0 +1,139 @@
+version: '2'
+
+networks:
+  default:
+
+services:
+
+  orderer.fudan.edu.cn:
+    image: hyperledger/fabric-orderer:x86_64-1.1.0
+    container_name: orderer.fudan.edu.cn
+    environment:
+      - ORDERER_GENERAL_LOGLEVEL=debug
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=7050
+      - ORDERER_GENERAL_GENESISPROFILE=FudanFabric
+      - ORDERER_GENERAL_GENESISMETHOD=file
+      - ORDERER_GENERAL_GENESISFILE=/var/hyperledger/orderer/orderer.genesis.block
+      - ORDERER_GENERAL_LOCALMSPID=fudan.edu.cn
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric
+    command: orderer
+    volumes:
+      - ./artifacts/orderer.genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+      - ./crypto-config/ordererOrganizations/fudan.edu.cn/orderers/orderer.fudan.edu.cn/msp:/var/hyperledger/orderer/msp
+      - ./crypto-config/ordererOrganizations/fudan.edu.cn/orderers/orderer.fudan.edu.cn/tls:/var/hyperledger/orderer/tls
+    ports:
+      - 7050:7050
+    networks:
+      default:
+        aliases:
+          - orderer.fudan.edu.cn
+
+  ca.org1.fudan.edu.cn:
+    image: hyperledger/fabric-ca:x86_64-1.1.0
+    container_name: ca.org1.fudan.edu.cn
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=ca.org1.fudan.edu.cn
+      - FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.org1.fudan.edu.cn-cert.pem
+      - FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server-config/ba454108a0c6443d83502e95788f7d33e7f98e6a5b8292cc98efe07e718e131a_sk
+      - FABRIC_CA_SERVER_TLS_ENABLED=true
+      - FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.org1.fudan.edu.cn-cert.pem
+      - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server-config/ba454108a0c6443d83502e95788f7d33e7f98e6a5b8292cc98efe07e718e131a_sk
+    ports:
+      - 7054:7054
+    command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
+    volumes:
+      - ./crypto-config/peerOrganizations/org1.fudan.edu.cn/ca/:/etc/hyperledger/fabric-ca-server-config
+    networks:
+      default:
+        aliases:
+          - ca.org1.fudan.edu.cn
+
+  peer0.org1.fudan.edu.cn:
+    image: hyperledger/fabric-peer:x86_64-1.1.0
+    container_name: peer0.org1.fudan.edu.cn
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_ATTACHSTDOUT=true
+      - CORE_LOGGING_LEVEL=DEBUG
+      - CORE_PEER_NETWORKID=fudanfabric
+      - CORE_PEER_PROFILE_ENABLED=true
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/var/hyperledger/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/var/hyperledger/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/var/hyperledger/tls/ca.crt
+      - CORE_PEER_ID=peer0.org1.fudan.edu.cn
+      - CORE_PEER_ADDRESSAUTODETECT=true
+      - CORE_PEER_ADDRESS=peer0.org1.fudan.edu.cn:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org1.fudan.edu.cn:7051
+      - CORE_PEER_GOSSIP_USELEADERELECTION=true
+      - CORE_PEER_GOSSIP_ORGLEADER=false
+      - CORE_PEER_GOSSIP_SKIPHANDSHAKE=true
+      - CORE_PEER_LOCALMSPID=org1.fudan.edu.cn
+      - CORE_PEER_MSPCONFIGPATH=/var/hyperledger/msp
+      - CORE_PEER_TLS_SERVERHOSTOVERRIDE=peer0.org1.fudan.edu.cn
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    volumes:
+      - /var/run/:/host/var/run/
+      - ./crypto-config/peerOrganizations/org1.fudan.edu.cn/peers/peer0.org1.fudan.edu.cn/msp:/var/hyperledger/msp
+      - ./crypto-config/peerOrganizations/org1.fudan.edu.cn/peers/peer0.org1.fudan.edu.cn/tls:/var/hyperledger/tls
+    ports:
+      - 7051:7051
+      - 7053:7053
+    depends_on:
+      - orderer.fudan.edu.cn
+    links:
+      - orderer.fudan.edu.cn
+    networks:
+      default:
+        aliases:
+          - peer0.org1.fudan.edu.cn
+
+  peer1.org1.fudan.edu.cn:
+    image: hyperledger/fabric-peer:x86_64-1.1.0
+    container_name: peer1.org1.fudan.edu.cn
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_ATTACHSTDOUT=true
+      - CORE_LOGGING_LEVEL=DEBUG
+      - CORE_PEER_NETWORKID=fudanfabric
+      - CORE_PEER_PROFILE_ENABLED=true
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/var/hyperledger/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/var/hyperledger/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/var/hyperledger/tls/ca.crt
+      - CORE_PEER_ID=peer1.org1.fudan.edu.cn
+      - CORE_PEER_ADDRESSAUTODETECT=true
+      - CORE_PEER_ADDRESS=peer1.org1.fudan.edu.cn:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.org1.fudan.edu.cn:7051
+      - CORE_PEER_GOSSIP_USELEADERELECTION=true
+      - CORE_PEER_GOSSIP_ORGLEADER=false
+      - CORE_PEER_GOSSIP_SKIPHANDSHAKE=true
+      - CORE_PEER_LOCALMSPID=org1.fudan.edu.cn
+      - CORE_PEER_MSPCONFIGPATH=/var/hyperledger/msp
+      - CORE_PEER_TLS_SERVERHOSTOVERRIDE=peer1.org1.fudan.edu.cn
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    volumes:
+      - /var/run/:/host/var/run/
+      - ./crypto-config/peerOrganizations/org1.fudan.edu.cn/peers/peer1.org1.fudan.edu.cn/msp:/var/hyperledger/msp
+      - ./crypto-config/peerOrganizations/org1.fudan.edu.cn/peers/peer1.org1.fudan.edu.cn/tls:/var/hyperledger/tls
+    ports:
+      - 8051:7051
+      - 8053:7053
+    depends_on:
+      - orderer.fudan.edu.cn
+    links:
+      - orderer.fudan.edu.cn
+    networks:
+      default:
+        aliases:
+          - peer1.org1.fudan.edu.cn
