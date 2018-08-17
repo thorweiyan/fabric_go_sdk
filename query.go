@@ -24,6 +24,10 @@ func (setup *FabricSetup) Query(args []string) (string, error) {
 		if err != nil {
 			return "", err
 		}
+		err = setup.initevent()
+		if err != nil {
+			return "", err
+		}
 	}
 
 	response, err := setup.client.Query(channel.Request{ChaincodeID: setup.ChainCodeID, Fcn: args[0], Args: inargs})
