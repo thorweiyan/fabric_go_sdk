@@ -132,6 +132,45 @@ func (setup *FabricSetup) InstallAndInstantiateCC(args []string) error {
 	setup.initialize = true
 	return nil
 }
+// 实例化cc
+func (setup *FabricSetup) InstantiateCC(args []string) error {
+	if !setup.initialize {
+		err := setup.initsdk()
+		if err != nil {
+			return err
+		}
+		err = setup.initadmin()
+		if err != nil {
+			return err
+		}
+	}
+	var inargs [][]byte
+
+	for _, i := range args {
+		inargs = append(inargs, []byte(i))
+	}
+	// Set up chaincode policy
+	ccPolicy := cauthdsl.SignedByAnyMember([]string{setup.OrgID})
+
+	resp, err := setup.admin.InstantiateCC(setup.ChannelID, resmgmt.InstantiateCCRequest{Name: setup.ChainCodeID, Path: setup.ChaincodeGoPath, Version: setup.ChaincodeVersion, Args: inargs, Policy: ccPolicy})
+	if err != nil || resp.TransactionID == "" {
+		return errors.WithMessage(err, "failed to instantiate the chaincode")
+	}
+	fmt.Println("Chaincode instantiated")
+
+	err = setup.initclient()
+	if err != nil {
+		return err
+	}
+	err = setup.initevent()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("ChaincodeInstantiation Successful")
+	setup.initialize = true
+	return nil
+}
 
 func (setup *FabricSetup) CloseSDK() {
 	setup.sdk.Close()
